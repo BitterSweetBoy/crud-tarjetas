@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { CardRepository } from '../repositories/card-repository';
 import { Card } from '../interfaces/card.interface';
 import { CreateCardDto } from './dto/create-card.dto';
@@ -14,36 +19,42 @@ export class CardService {
   ) {}
 
   async createCard(createCardDto: CreateCardDto): Promise<Card> {
-    const card = await this.cardRepository.createCard(createCardDto);
-    if (!card) {
-      throw new Error('Error al crear la card');
+    try {
+      const card = await this.cardRepository.createCard(createCardDto);
+      await this.logService.logCardOperation(
+        LogAction.CREATE,
+        card.id!,
+        card,
+        null,
+      );
+      return card;
+    } catch (error) {
+      throw new InternalServerErrorException('Error al crear la card');
     }
-    await this.logService.logCardOperation(
-      LogAction.CREATE,
-      card.id!,
-      card,
-      null,
-    );
-    return card;
   }
 
   async getAllCards(): Promise<Card[]> {
-    const cards = await this.cardRepository.findAll();
-    if (!cards) {
-      throw new Error('Error al obtener las cards');
+    try {
+      const cards = await this.cardRepository.findAll();
+      return cards;
+    } catch (error) {
+      throw new InternalServerErrorException('Error al obtener las cards');
     }
-    return cards;
   }
 
-  async getCardById(id: string): Promise<Card | null> {
+  async getCardById(id: string): Promise<Card> {
+    if (!id) throw new BadRequestException('No se ha proporcionado un Id');
+
     const card = await this.cardRepository.findById(id);
     if (!card) {
-      throw new Error('Card no encontrada');
+      throw new NotFoundException('Card no encontrada');
     }
     return card;
   }
 
   async updateCard(id: string, updateCardDto: UpdateCardDto): Promise<Card> {
+    if (!id) throw new BadRequestException('No se ha proporcionado un Id');
+
     const oldCard = await this.cardRepository.findById(id);
     if (!oldCard) {
       throw new NotFoundException('La card a actualizar no fue encontrada');
@@ -54,6 +65,7 @@ export class CardService {
         id,
         updateCardDto,
       );
+
       await this.logService.logCardOperation(
         LogAction.UPDATE,
         id,
@@ -66,19 +78,24 @@ export class CardService {
           descriptions: oldCard.descriptions,
         },
       );
+
       return updatedCard;
     } catch (error) {
-      throw new NotFoundException('Card not found');
+      throw new InternalServerErrorException('Error al actualizar la card');
     }
   }
 
   async deleteCard(id: string): Promise<void> {
+    if (!id) throw new BadRequestException('No se ha proporcionado un Id');
+
     const oldCard = await this.cardRepository.findById(id);
     if (!oldCard) {
       throw new NotFoundException('La card a eliminar no fue encontrada');
     }
+
     try {
       await this.cardRepository.desactivateCard(id);
+
       await this.logService.logCardOperation(
         LogAction.DELETE,
         id,
@@ -89,10 +106,7 @@ export class CardService {
         },
       );
     } catch (error) {
-      if (error.message === 'Card not found') {
-        throw new NotFoundException('Card no encontrada');
-      }
-      throw error;
+      throw new InternalServerErrorException('Error al eliminar la card');
     }
   }
 }

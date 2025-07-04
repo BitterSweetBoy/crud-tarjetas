@@ -48,9 +48,13 @@ export class CardRepository {
   }
 
   async findById(id: string): Promise<Card | null> {
+    if (!id) throw new Error('El Id es inválido');
+
     const [cardRows] = await this.databaseService
       .getPool()
-      .execute<mysql.RowDataPacket[]>('SELECT * FROM cards WHERE id = ?', [id]);
+      .execute<
+        mysql.RowDataPacket[]
+      >('SELECT * FROM cards WHERE id = ? AND is_active = TRUE', [id]);
 
     if (cardRows.length === 0) {
       return null;
@@ -64,7 +68,6 @@ export class CardRepository {
 
     const card = cardRows[0] as Card;
     card.descriptions = descriptionRows as CardDescription[];
-
     return card;
   }
 
@@ -72,9 +75,16 @@ export class CardRepository {
     const [rows] = await this.databaseService
       .getPool()
       .execute<mysql.RowDataPacket[]>(
-        `SELECT c.id, c.title, c.created_at, cd.id as description_id, cd.description, cd.created_at as description_created_at
+        `SELECT
+        c.id,
+        c.title,
+        c.created_at,
+        cd.id            AS description_id,
+        cd.description,
+        cd.created_at    AS description_created_at
       FROM cards c
       LEFT JOIN card_descriptions cd ON c.id = cd.card_id
+      WHERE c.is_active = TRUE
       ORDER BY c.created_at DESC, cd.created_at ASC`,
       );
 
@@ -99,6 +109,7 @@ export class CardRepository {
         });
       }
     }
+
     return Array.from(cardsMap.values());
   }
 

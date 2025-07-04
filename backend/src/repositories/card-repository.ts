@@ -3,6 +3,7 @@ import { DatabaseService } from '../database/database.service';
 import { Card, CardDescription } from '../interfaces/card.interface';
 import mysql, { ResultSetHeader } from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
+import { CardDescriptionDto, CardDto } from 'src/cards/dto/card-dto';
 
 @Injectable()
 export class CardRepository {
@@ -11,7 +12,7 @@ export class CardRepository {
   async createCard(cardData: {
     title: string;
     descriptions: string[];
-  }): Promise<Card> {
+  }): Promise<CardDto> {
     const connection = await this.databaseService.getConnection();
 
     try {
@@ -20,7 +21,7 @@ export class CardRepository {
       const cardId = uuidv4();
 
       await connection.execute(
-        'INSERT INTO cards (id, title, created_at) VALUES (?, ?, NOW())',
+        'INSERT INTO cards (id, title, created_at, is_active) VALUES (?, ?, NOW(), TRUE)',
         [cardId, cardData.title],
       );
 
@@ -36,8 +37,9 @@ export class CardRepository {
 
       const createdCard = await this.findById(cardId);
       if (!createdCard) {
-        throw new Error('Failed to create card');
+        throw new Error('Error al crear la card');
       }
+
       return createdCard;
     } catch (error) {
       await connection.rollback();
@@ -47,48 +49,64 @@ export class CardRepository {
     }
   }
 
-  async findById(id: string): Promise<Card | null> {
+  async findById(id: string): Promise<CardDto | null> {
     if (!id) throw new Error('El Id es inválido');
 
-    const [cardRows] = await this.databaseService
-      .getPool()
-      .execute<
-        mysql.RowDataPacket[]
-      >('SELECT * FROM cards WHERE id = ? AND is_active = TRUE', [id]);
-
-    if (cardRows.length === 0) {
-      return null;
-    }
-
-    const [descriptionRows] = await this.databaseService
-      .getPool()
-      .execute<
-        mysql.RowDataPacket[]
-      >('SELECT * FROM card_descriptions WHERE card_id = ? ORDER BY created_at ASC', [id]);
-
-    const card = cardRows[0] as Card;
-    card.descriptions = descriptionRows as CardDescription[];
-    return card;
-  }
-
-  async findAll(): Promise<Card[]> {
     const [rows] = await this.databaseService
       .getPool()
       .execute<mysql.RowDataPacket[]>(
-        `SELECT
+        `SELECT 
         c.id,
         c.title,
         c.created_at,
-        cd.id            AS description_id,
+        cd.id AS description_id,
         cd.description,
-        cd.created_at    AS description_created_at
+        cd.created_at AS description_created_at
+      FROM cards c
+      LEFT JOIN card_descriptions cd ON c.id = cd.card_id
+      WHERE c.is_active = TRUE AND c.id = ?
+      ORDER BY cd.created_at ASC`,
+        [id],
+      );
+
+    if (rows.length === 0) return null;
+
+    const card: CardDto = {
+      id: rows[0].id,
+      title: rows[0].title,
+      created_at: rows[0].created_at,
+      descriptions: rows
+        .filter((row) => row.description_id)
+        .map(
+          (row): CardDescriptionDto => ({
+            id: row.description_id,
+            description: row.description,
+            created_at: row.description_created_at,
+          }),
+        ),
+    };
+
+    return card;
+  }
+
+  async findAll(): Promise<CardDto[]> {
+    const [rows] = await this.databaseService
+      .getPool()
+      .execute<mysql.RowDataPacket[]>(
+        `SELECT 
+        c.id,
+        c.title,
+        c.created_at,
+        cd.id AS description_id,
+        cd.description,
+        cd.created_at AS description_created_at
       FROM cards c
       LEFT JOIN card_descriptions cd ON c.id = cd.card_id
       WHERE c.is_active = TRUE
       ORDER BY c.created_at DESC, cd.created_at ASC`,
       );
 
-    const cardsMap = new Map<string, Card>();
+    const cardsMap = new Map<string, CardDto>();
 
     for (const row of rows) {
       if (!cardsMap.has(row.id)) {
@@ -101,9 +119,8 @@ export class CardRepository {
       }
 
       if (row.description_id) {
-        cardsMap.get(row.id)!.descriptions!.push({
+        cardsMap.get(row.id)!.descriptions.push({
           id: row.description_id,
-          card_id: row.id,
           description: row.description,
           created_at: row.description_created_at,
         });
@@ -116,17 +133,19 @@ export class CardRepository {
   async updateCard(
     id: string,
     updateData: { title?: string; descriptions?: string[] },
-  ): Promise<Card> {
+  ): Promise<CardDto> {
     const connection = await this.databaseService.getConnection();
+
     try {
       await connection.beginTransaction();
+
       const [existingRows] = await connection.execute<mysql.RowDataPacket[]>(
-        'SELECT * FROM cards WHERE id = ?',
+        'SELECT * FROM cards WHERE id = ? AND is_active = TRUE',
         [id],
       );
 
       if (existingRows.length === 0) {
-        throw new Error('Card not found');
+        throw new Error('La card a actualizar no existe');
       }
 
       if (updateData.title) {
@@ -141,6 +160,7 @@ export class CardRepository {
           'DELETE FROM card_descriptions WHERE card_id = ?',
           [id],
         );
+
         for (const description of updateData.descriptions) {
           const descriptionId = uuidv4();
           await connection.execute(
@@ -149,11 +169,14 @@ export class CardRepository {
           );
         }
       }
+
       await connection.commit();
+
       const updatedCard = await this.findById(id);
       if (!updatedCard) {
-        throw new Error('Failed to update card');
+        throw new Error('Error al actualizar la card');
       }
+
       return updatedCard;
     } catch (error) {
       await connection.rollback();
@@ -174,6 +197,7 @@ export class CardRepository {
       if (result.affectedRows === 0) {
         throw new Error('Card not found');
       }
+      await connection.commit();
     } catch (error) {
       await connection.rollback();
       throw error;

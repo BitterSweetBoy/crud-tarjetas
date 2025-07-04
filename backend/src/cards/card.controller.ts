@@ -3,6 +3,7 @@ import { CardService } from './card.service';
 import { CreateCardDto } from './dto/create-card.dto';
 import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UpdateCardDto } from './dto/update-card.dto';
+import { CardDto } from './dto/card-dto';
 
 @Controller('cards')
 export class CardController {
@@ -39,7 +40,8 @@ export class CardController {
   @ApiOperation({ summary: 'Obtiene todas las cards' })
   @ApiResponse({
     status: 200,
-    description: 'Lista de cards obtenida correctamente'
+    description: 'Lista de cards obtenida correctamente',
+    type: CardDto
   })
   @ApiResponse({
     status: 500,
@@ -53,7 +55,8 @@ export class CardController {
   @ApiOperation({ summary: 'Obtiene una card por su ID' })
   @ApiResponse({
     status: 200,
-    description: 'Card obtenida correctamente'
+    description: 'Card obtenida correctamente',
+    type: CardDto
   })
   @ApiResponse({
     status: 404,

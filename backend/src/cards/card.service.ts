@@ -10,6 +10,7 @@ import { CreateCardDto } from './dto/create-card.dto';
 import { LogService } from '../services/log.service';
 import { LogAction } from '../interfaces/log.interface';
 import { UpdateCardDto } from './dto/update-card.dto';
+import { CardDto } from './dto/card-dto';
 
 @Injectable()
 export class CardService {
@@ -18,7 +19,7 @@ export class CardService {
     private readonly logService: LogService,
   ) {}
 
-  async createCard(createCardDto: CreateCardDto): Promise<Card> {
+  async createCard(createCardDto: CreateCardDto): Promise<CardDto> {
     try {
       const card = await this.cardRepository.createCard(createCardDto);
       await this.logService.logCardOperation(
@@ -33,7 +34,7 @@ export class CardService {
     }
   }
 
-  async getAllCards(): Promise<Card[]> {
+  async getAllCards(): Promise<CardDto[]> {
     try {
       const cards = await this.cardRepository.findAll();
       return cards;
@@ -42,7 +43,7 @@ export class CardService {
     }
   }
 
-  async getCardById(id: string): Promise<Card> {
+  async getCardById(id: string): Promise<CardDto> {
     if (!id) throw new BadRequestException('No se ha proporcionado un Id');
 
     const card = await this.cardRepository.findById(id);
@@ -52,7 +53,7 @@ export class CardService {
     return card;
   }
 
-  async updateCard(id: string, updateCardDto: UpdateCardDto): Promise<Card> {
+  async updateCard(id: string, updateCardDto: UpdateCardDto): Promise<CardDto> {
     if (!id) throw new BadRequestException('No se ha proporcionado un Id');
 
     const oldCard = await this.cardRepository.findById(id);

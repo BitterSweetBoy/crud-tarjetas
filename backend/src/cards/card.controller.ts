@@ -33,4 +33,19 @@ export class CardController {
   async createCard(@Body() createCardDto: CreateCardDto) {
     return await this.cardService.createCard(createCardDto);
   }
+
+  @Get()
+  @ApiOperation({ summary: 'Obtiene todas las cards' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de cards obtenida correctamente'
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error al obtener las cards'
+  })
+  async getAllCards() {
+    return await this.cardService.getAllCards();
+  }
+
 }

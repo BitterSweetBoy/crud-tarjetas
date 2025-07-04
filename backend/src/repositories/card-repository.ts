@@ -61,4 +61,38 @@ export class CardRepository {
     return card;
   }
 
+  async findAll(): Promise<Card[]> {
+    const [rows] = await this.databaseService
+      .getPool()
+      .execute<mysql.RowDataPacket[]>(
+        `SELECT c.id, c.title, c.created_at, cd.id as description_id, cd.description, cd.created_at as description_created_at
+      FROM cards c
+      LEFT JOIN card_descriptions cd ON c.id = cd.card_id
+      ORDER BY c.created_at DESC, cd.created_at ASC`,
+      );
+
+    const cardsMap = new Map<string, Card>();
+
+    for (const row of rows) {
+      if (!cardsMap.has(row.id)) {
+        cardsMap.set(row.id, {
+          id: row.id,
+          title: row.title,
+          created_at: row.created_at,
+          descriptions: [],
+        });
+      }
+
+      if (row.description_id) {
+        cardsMap.get(row.id)!.descriptions!.push({
+          id: row.description_id,
+          card_id: row.id,
+          description: row.description,
+          created_at: row.description_created_at,
+        });
+      }
+    }
+    return Array.from(cardsMap.values());
+  }
+
 }

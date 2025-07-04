@@ -25,4 +25,12 @@ export class CardService {
     );
     return card;
   }
+
+  async getAllCards(): Promise<Card[]> {
+    const cards = await this.cardRepository.findAll();
+    if (!cards) {
+      throw new Error('Error al obtener las cards');
+    }
+    return cards;
+  }
 }

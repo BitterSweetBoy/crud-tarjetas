@@ -1,14 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { Card, CardDescription } from '../interfaces/card.interface';
-import mysql from 'mysql2/promise';
+import mysql, { ResultSetHeader } from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class CardRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async createCard(cardData: { title: string; descriptions: string[];}): Promise<Card> {
+  async createCard(cardData: {
+    title: string;
+    descriptions: string[];
+  }): Promise<Card> {
     const connection = await this.databaseService.getConnection();
 
     try {
@@ -45,15 +48,19 @@ export class CardRepository {
   }
 
   async findById(id: string): Promise<Card | null> {
-    const [cardRows] = await this.databaseService.getPool()
+    const [cardRows] = await this.databaseService
+      .getPool()
       .execute<mysql.RowDataPacket[]>('SELECT * FROM cards WHERE id = ?', [id]);
 
     if (cardRows.length === 0) {
       return null;
     }
 
-    const [descriptionRows] = await this.databaseService.getPool().execute<
-        mysql.RowDataPacket[]>('SELECT * FROM card_descriptions WHERE card_id = ? ORDER BY created_at ASC', [id]);
+    const [descriptionRows] = await this.databaseService
+      .getPool()
+      .execute<
+        mysql.RowDataPacket[]
+      >('SELECT * FROM card_descriptions WHERE card_id = ? ORDER BY created_at ASC', [id]);
 
     const card = cardRows[0] as Card;
     card.descriptions = descriptionRows as CardDescription[];
@@ -95,23 +102,33 @@ export class CardRepository {
     return Array.from(cardsMap.values());
   }
 
-  async updateCard( id: string, updateData: { title?: string; descriptions?: string[] }): Promise<Card> {
+  async updateCard(
+    id: string,
+    updateData: { title?: string; descriptions?: string[] },
+  ): Promise<Card> {
     const connection = await this.databaseService.getConnection();
     try {
       await connection.beginTransaction();
-      const [existingRows] = await connection.execute<mysql.RowDataPacket[]>('SELECT * FROM cards WHERE id = ?', [id]);
+      const [existingRows] = await connection.execute<mysql.RowDataPacket[]>(
+        'SELECT * FROM cards WHERE id = ?',
+        [id],
+      );
 
       if (existingRows.length === 0) {
         throw new Error('Card not found');
       }
 
       if (updateData.title) {
-        await connection.execute('UPDATE cards SET title = ? WHERE id = ?', [updateData.title, id,]);
+        await connection.execute('UPDATE cards SET title = ? WHERE id = ?', [
+          updateData.title,
+          id,
+        ]);
       }
 
       if (updateData.descriptions) {
         await connection.execute(
-          'DELETE FROM card_descriptions WHERE card_id = ?', [id],
+          'DELETE FROM card_descriptions WHERE card_id = ?',
+          [id],
         );
         for (const description of updateData.descriptions) {
           const descriptionId = uuidv4();
@@ -127,6 +144,25 @@ export class CardRepository {
         throw new Error('Failed to update card');
       }
       return updatedCard;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async desactivateCard(id: string): Promise<void> {
+    const connection = await this.databaseService.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [result] = await connection.execute<ResultSetHeader>(
+        'UPDATE cards SET is_active = FALSE WHERE id = ?',
+        [id],
+      );
+      if (result.affectedRows === 0) {
+        throw new Error('Card not found');
+      }
     } catch (error) {
       await connection.rollback();
       throw error;

@@ -10,7 +10,7 @@ import { UpdateCardDto } from './dto/update-card.dto';
 export class CardService {
   constructor(
     private readonly cardRepository: CardRepository,
-    private readonly logService: LogService
+    private readonly logService: LogService,
   ) {}
 
   async createCard(createCardDto: CreateCardDto): Promise<Card> {
@@ -22,7 +22,7 @@ export class CardService {
       LogAction.CREATE,
       card.id!,
       card,
-      null
+      null,
     );
     return card;
   }
@@ -48,22 +48,51 @@ export class CardService {
     if (!oldCard) {
       throw new NotFoundException('La card a actualizar no fue encontrada');
     }
-    
-    const updatedCard = await this.cardRepository.updateCard(id, updateCardDto);
 
-    await this.logService.logCardOperation(
-      LogAction.UPDATE,
-      id, 
-      {
-        title: updatedCard.title,
-        descriptions: updatedCard.descriptions,
-      },
-      {
-        title: oldCard.title,
-        descriptions: oldCard.descriptions,
-      },
-    );
-    return updatedCard;
+    try {
+      const updatedCard = await this.cardRepository.updateCard(
+        id,
+        updateCardDto,
+      );
+      await this.logService.logCardOperation(
+        LogAction.UPDATE,
+        id,
+        {
+          title: updatedCard.title,
+          descriptions: updatedCard.descriptions,
+        },
+        {
+          title: oldCard.title,
+          descriptions: oldCard.descriptions,
+        },
+      );
+      return updatedCard;
+    } catch (error) {
+      throw new NotFoundException('Card not found');
+    }
   }
 
+  async deleteCard(id: string): Promise<void> {
+    const oldCard = await this.cardRepository.findById(id);
+    if (!oldCard) {
+      throw new NotFoundException('La card a eliminar no fue encontrada');
+    }
+    try {
+      await this.cardRepository.desactivateCard(id);
+      await this.logService.logCardOperation(
+        LogAction.DELETE,
+        id,
+        {},
+        {
+          title: oldCard.title,
+          descriptions: oldCard.descriptions,
+        },
+      );
+    } catch (error) {
+      if (error.message === 'Card not found') {
+        throw new NotFoundException('Card no encontrada');
+      }
+      throw error;
+    }
+  }
 }

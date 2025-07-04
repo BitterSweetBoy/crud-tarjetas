@@ -98,4 +98,21 @@ export class CardController {
     return await this.cardService.updateCard(id, updateCardDto)
   }
 
+  @Delete(':id')
+  @ApiOperation({ summary: 'Elimina una card' })
+  @ApiResponse({
+    status: 200,
+    description: 'Card eliminada correctamente'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'La card a eliminar no existe'
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error al eliminar la Card'
+  })
+  async deleteCard(@Param('id') id: string){
+    return await this.cardService.deleteCard(id);
+  }
 }

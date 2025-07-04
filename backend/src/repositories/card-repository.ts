@@ -3,7 +3,7 @@ import { DatabaseService } from '../database/database.service';
 import { Card, CardDescription } from '../interfaces/card.interface';
 import mysql, { ResultSetHeader } from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
-import { CardDescriptionDto, CardDto } from 'src/cards/dto/card-dto';
+import { CardDescriptionDto, CardDto } from '../cards/dto/card.dto';
 
 @Injectable()
 export class CardRepository {
@@ -89,25 +89,30 @@ export class CardRepository {
     return card;
   }
 
-  async findAll(): Promise<CardDto[]> {
+  async findAllPaginated(opts: {
+    limit: number;
+    offset: number;
+  }): Promise<CardDto[]> {
+    const { limit, offset } = opts;
     const [rows] = await this.databaseService
       .getPool()
       .execute<mysql.RowDataPacket[]>(
         `SELECT 
-        c.id,
-        c.title,
-        c.created_at,
-        cd.id AS description_id,
-        cd.description,
-        cd.created_at AS description_created_at
-      FROM cards c
-      LEFT JOIN card_descriptions cd ON c.id = cd.card_id
-      WHERE c.is_active = TRUE
-      ORDER BY c.created_at DESC, cd.created_at ASC`,
+           c.id,
+           c.title,
+           c.created_at,
+           cd.id AS description_id,
+           cd.description,
+           cd.created_at AS description_created_at
+         FROM cards c
+         LEFT JOIN card_descriptions cd 
+           ON c.id = cd.card_id
+         WHERE c.is_active = TRUE
+         ORDER BY c.created_at DESC, cd.created_at ASC
+         LIMIT ? OFFSET ?`,
+        [limit, offset],
       );
-
     const cardsMap = new Map<string, CardDto>();
-
     for (const row of rows) {
       if (!cardsMap.has(row.id)) {
         cardsMap.set(row.id, {
@@ -117,16 +122,14 @@ export class CardRepository {
           descriptions: [],
         });
       }
-
       if (row.description_id) {
         cardsMap.get(row.id)!.descriptions.push({
           id: row.description_id,
           description: row.description,
           created_at: row.description_created_at,
-        });
+        } as CardDescriptionDto);
       }
     }
-
     return Array.from(cardsMap.values());
   }
 
@@ -204,5 +207,16 @@ export class CardRepository {
     } finally {
       connection.release();
     }
+  }
+
+  async countActiveCards(): Promise<number> {
+    const [rows] = await this.databaseService
+      .getPool()
+      .execute<mysql.RowDataPacket[]>(
+        `SELECT COUNT(*) AS count
+         FROM cards c
+         WHERE c.is_active = TRUE`,
+      );
+    return rows[0].count;
   }
 }

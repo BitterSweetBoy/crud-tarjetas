@@ -10,7 +10,8 @@ import { CreateCardDto } from './dto/create-card.dto';
 import { LogService } from '../services/log.service';
 import { LogAction } from '../interfaces/log.interface';
 import { UpdateCardDto } from './dto/update-card.dto';
-import { CardDto } from './dto/card-dto';
+import { CardDto } from './dto/card.dto';
+import { PaginatedCardsDto } from './dto/paginated-cards.dto';
 
 @Injectable()
 export class CardService {
@@ -34,12 +35,25 @@ export class CardService {
     }
   }
 
-  async getAllCards(): Promise<CardDto[]> {
+  async getAllCards(pagination: {
+    page: number;
+    limit: number;
+  }): Promise<PaginatedCardsDto> {
+    const { page, limit } = pagination;
+    const offset = (page - 1) * limit;
+
     try {
-      const cards = await this.cardRepository.findAll();
-      return cards;
+      const total = await this.cardRepository.countActiveCards();
+      const data = await this.cardRepository.findAllPaginated({
+        limit,
+        offset,
+      });
+
+      return { page, limit, total, data };
     } catch (error) {
-      throw new InternalServerErrorException('Error al obtener las cards');
+      throw new InternalServerErrorException(
+        'Error al obtener las cards paginadas',
+      );
     }
   }
 

@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, DefaultValuePipe, ParseIntPipe, Query, BadRequestException } from '@nestjs/common';
 import { CardService } from './card.service';
 import { CreateCardDto } from './dto/create-card.dto';
-import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { UpdateCardDto } from './dto/update-card.dto';
-import { CardDto } from './dto/card-dto';
+import { CardDto } from './dto/card.dto';
+import { PaginatedCardsDto } from './dto/paginated-cards.dto';
 
 @Controller('cards')
 export class CardController {
@@ -37,18 +38,45 @@ export class CardController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtiene todas las cards' })
+  @ApiOperation({ summary: 'Obtiene todas las cards paginadas' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    example: 1,
+    description: 'Número de página (>=1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    example: 10,
+    description: 'Cantidad de items por página',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Lista de cards obtenida correctamente',
-    type: CardDto
+    description: 'Lista paginada de cards',
+    type: PaginatedCardsDto,
   })
   @ApiResponse({
     status: 500,
     description: 'Error al obtener las cards'
   })
-  async getAllCards() {
-    return await this.cardService.getAllCards();
+  async getAllCards(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    if (page < 1) {
+      throw new BadRequestException(
+        'El parámetro page debe ser un número entero mayor o igual a 1',
+      );
+    }
+    if (limit < 1) {
+      throw new BadRequestException(
+        'El parámetro limit debe ser un número entero mayor o igual a 1',
+      );
+    }
+    return await this.cardService.getAllCards({page, limit});
   }
 
   @Get(':id')

@@ -38,14 +38,16 @@ export class LogRepository {
   }
 
   async findAllLogs(limit = 100, offset = 0): Promise<CardLog[]> {
+    const limitInt = Math.max(1, parseInt(limit.toString(), 10));
+    const offsetInt = Math.max(0, parseInt(offset.toString(), 10));
+
     const [rows] = await this.databaseService
       .getPool()
-      .execute<mysql.RowDataPacket[]>(
+      .query<mysql.RowDataPacket[]>(
         `SELECT id, action, entity_type, entity_id, old_data, new_data, created_at
          FROM cards_logs
          ORDER BY created_at DESC
-         LIMIT ? OFFSET ?`,
-        [limit, offset],
+         LIMIT ${limitInt} OFFSET ${offsetInt}`,
       );
 
     return rows.map((row) => ({

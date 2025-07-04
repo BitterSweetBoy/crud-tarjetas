@@ -12,7 +12,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     const host = this.configService.get<string>('DB_HOST');
     const port = this.configService.get<number>('DB_PORT');
     const user = this.configService.get<string>('DB_USER');
-    const pass = this.configService.get<string>('DB_PASS');
+    const pass = this.configService.get<string>('DB_PASSWORD');
     const db = this.configService.get<string>('DB_NAME');
     this.pool = mysql.createPool({
       host,
@@ -28,18 +28,6 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
     });
-    // this.pool = mysql.createPool({
-    //     host: 'localhost',
-    //     user: 'root',
-    //     database: 'cards',
-    //     waitForConnections: true,
-    //     connectionLimit: 10,
-    //     maxIdle: 10,
-    //     idleTimeout: 60000,
-    //     queueLimit: 0,
-    //     enableKeepAlive: true,
-    //     keepAliveInitialDelay: 0,
-    // });
   }
 
   async onModuleDestroy() {

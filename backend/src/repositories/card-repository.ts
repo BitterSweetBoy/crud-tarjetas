@@ -94,9 +94,14 @@ export class CardRepository {
     offset: number;
   }): Promise<CardDto[]> {
     const { limit, offset } = opts;
+    
+    // Validar que son números enteros positivos
+    const limitInt = Math.max(1, parseInt(limit.toString(), 10));
+    const offsetInt = Math.max(0, parseInt(offset.toString(), 10));
+    
     const [rows] = await this.databaseService
       .getPool()
-      .execute<mysql.RowDataPacket[]>(
+      .query<mysql.RowDataPacket[]>(
         `SELECT 
            c.id,
            c.title,
@@ -109,8 +114,7 @@ export class CardRepository {
            ON c.id = cd.card_id
          WHERE c.is_active = TRUE
          ORDER BY c.created_at DESC, cd.created_at ASC
-         LIMIT ? OFFSET ?`,
-        [limit, offset],
+         LIMIT ${limitInt} OFFSET ${offsetInt}`,
       );
     const cardsMap = new Map<string, CardDto>();
     for (const row of rows) {

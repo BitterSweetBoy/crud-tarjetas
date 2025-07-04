@@ -51,7 +51,7 @@ export class CardService {
 
       return { page, limit, total, data };
     } catch (error) {
-      console.error('❌ Error en getAllCards:', error);
+      console.error('Error en getAllCards:', error);
       throw new InternalServerErrorException(
         'Error al obtener las cards paginadas',
       );

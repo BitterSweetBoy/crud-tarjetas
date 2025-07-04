@@ -94,8 +94,7 @@ export class CardRepository {
     offset: number;
   }): Promise<CardDto[]> {
     const { limit, offset } = opts;
-    
-    // Validar que son números enteros positivos
+  
     const limitInt = Math.max(1, parseInt(limit.toString(), 10));
     const offsetInt = Math.max(0, parseInt(offset.toString(), 10));
     
@@ -223,4 +222,5 @@ export class CardRepository {
       );
     return rows[0].count;
   }
+
 }

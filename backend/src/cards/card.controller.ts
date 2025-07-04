@@ -48,4 +48,22 @@ export class CardController {
     return await this.cardService.getAllCards();
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtiene una card por su ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Card obtenida correctamente'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Card no encontrada'
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error al obtener la card'
+  })
+  async getCard(@Param('id') id: string) {
+    return await this.cardService.getCardById(id);
+  }
+
 }

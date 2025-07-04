@@ -33,4 +33,13 @@ export class CardService {
     }
     return cards;
   }
+
+  async getCardById(id: string): Promise<Card | null> {
+    const card = await this.cardRepository.findById(id);
+    if (!card) {
+      throw new Error('Card no encontrada');
+    }
+    return card;
+  }
+
 }

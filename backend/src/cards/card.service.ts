@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CardRepository } from '../repositories/card-repository';
 import { Card } from '../interfaces/card.interface';
 import { CreateCardDto } from './dto/create-card.dto';
 import { LogService } from '../services/log.service';
 import { LogAction } from '../interfaces/log.interface';
+import { UpdateCardDto } from './dto/update-card.dto';
 
 @Injectable()
 export class CardService {
@@ -40,6 +41,29 @@ export class CardService {
       throw new Error('Card no encontrada');
     }
     return card;
+  }
+
+  async updateCard(id: string, updateCardDto: UpdateCardDto): Promise<Card> {
+    const oldCard = await this.cardRepository.findById(id);
+    if (!oldCard) {
+      throw new NotFoundException('La card a actualizar no fue encontrada');
+    }
+    
+    const updatedCard = await this.cardRepository.updateCard(id, updateCardDto);
+
+    await this.logService.logCardOperation(
+      LogAction.UPDATE,
+      id, 
+      {
+        title: updatedCard.title,
+        descriptions: updatedCard.descriptions,
+      },
+      {
+        title: oldCard.title,
+        descriptions: oldCard.descriptions,
+      },
+    );
+    return updatedCard;
   }
 
 }

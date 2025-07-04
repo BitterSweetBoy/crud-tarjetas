@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common'
 import { CardService } from './card.service';
 import { CreateCardDto } from './dto/create-card.dto';
 import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { UpdateCardDto } from './dto/update-card.dto';
 
 @Controller('cards')
 export class CardController {
@@ -64,6 +65,37 @@ export class CardController {
   })
   async getCard(@Param('id') id: string) {
     return await this.cardService.getCardById(id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Actualiza una card por su ID' })
+  @ApiBody({
+    type: UpdateCardDto,
+    examples: {
+      example1: {
+        value: {
+          title: 'Titulo actualizado',
+          descriptions: [
+            'Descripción Actualizada',
+          ]
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Card actualizada correctamente'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'La card a Actualizar no existe'
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error al actualizar la Card'
+  })
+  async updateCard(@Param('id') id: string, @Body() updateCardDto: UpdateCardDto){
+    return await this.cardService.updateCard(id, updateCardDto)
   }
 
 }

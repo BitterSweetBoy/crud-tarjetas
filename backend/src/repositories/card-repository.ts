@@ -95,4 +95,43 @@ export class CardRepository {
     return Array.from(cardsMap.values());
   }
 
+  async updateCard( id: string, updateData: { title?: string; descriptions?: string[] }): Promise<Card> {
+    const connection = await this.databaseService.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [existingRows] = await connection.execute<mysql.RowDataPacket[]>('SELECT * FROM cards WHERE id = ?', [id]);
+
+      if (existingRows.length === 0) {
+        throw new Error('Card not found');
+      }
+
+      if (updateData.title) {
+        await connection.execute('UPDATE cards SET title = ? WHERE id = ?', [updateData.title, id,]);
+      }
+
+      if (updateData.descriptions) {
+        await connection.execute(
+          'DELETE FROM card_descriptions WHERE card_id = ?', [id],
+        );
+        for (const description of updateData.descriptions) {
+          const descriptionId = uuidv4();
+          await connection.execute(
+            'INSERT INTO card_descriptions (id, card_id, description, created_at) VALUES (?, ?, ?, NOW())',
+            [descriptionId, id, description],
+          );
+        }
+      }
+      await connection.commit();
+      const updatedCard = await this.findById(id);
+      if (!updatedCard) {
+        throw new Error('Failed to update card');
+      }
+      return updatedCard;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
 }

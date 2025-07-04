@@ -15,8 +15,8 @@ export class LogRepository {
       const logId = uuidv4();
       
       await connection.execute(
-        `INSERT INTO user_logs (id, user_id, action, entity_type, entity_id, old_data, new_data, ip_address, user_agent, created_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        `INSERT INTO cards_logs (id, action, entity_type, entity_id, old_data, new_data, created_at) 
+         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
         [
           logId,
           logData.action,
@@ -34,7 +34,7 @@ export class LogRepository {
 
   async findAllLogs(limit: number = 100, offset: number = 0): Promise<CardLog[]> {
     const [rows] = await this.databaseService.getPool().execute<mysql.RowDataPacket[]>(
-      `SELECT * FROM user_logs 
+      `SELECT * FROM cards_logs 
        ORDER BY created_at DESC 
        LIMIT ? OFFSET ?`,
       [limit, offset]
@@ -49,7 +49,7 @@ export class LogRepository {
 
   async findLogsByEntity(entityType: string, entityId: string): Promise<CardLog[]> {
     const [rows] = await this.databaseService.getPool().execute<mysql.RowDataPacket[]>(
-      `SELECT * FROM user_logs 
+      `SELECT * FROM cards_logs 
        WHERE entity_type = ? AND entity_id = ?
        ORDER BY created_at DESC`,
       [entityType, entityId]

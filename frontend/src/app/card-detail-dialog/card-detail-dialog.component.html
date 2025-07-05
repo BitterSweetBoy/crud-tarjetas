@@ -1,0 +1,232 @@
+<p-dialog
+  [(visible)]="visible"
+  [modal]="true"
+  [closable]="false"
+  [style]="{ width: '1000px' }"
+  header="Detalle de Card"
+  (onHide)="hide()"
+>
+  <p-tabs value="0">
+    <p-tablist>
+      <p-tab value="0">Información</p-tab>
+      <p-tab value="1">Historial</p-tab>
+    </p-tablist>
+
+    <!-- Tabs -->
+    <p-tabpanels>
+      <p-tabpanel value="0">
+        <div *ngIf="card" class="space-y-6">
+          <!-- Título -->
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center mb-2">
+              <i class="pi pi-bookmark text-blue-500 mr-2"></i>
+              <label
+                class="text-sm font-semibold text-gray-700 uppercase tracking-wide"
+                >Título</label
+              >
+            </div>
+            <p class="text-gray-900 font-medium">{{ card.title }}</p>
+          </div>
+
+          <!-- Fecha de creación -->
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center mb-2">
+              <i class="pi pi-calendar text-green-500 mr-2"></i>
+              <label
+                class="text-sm font-semibold text-gray-700 uppercase tracking-wide"
+                >Creado</label
+              >
+            </div>
+            <p class="text-gray-900 font-medium">
+              {{ formatDate(card.created_at) }}
+            </p>
+          </div>
+
+          <!-- Descripciones -->
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center mb-3">
+              <i class="pi pi-list text-purple-500 mr-2"></i>
+              <label
+                class="text-sm font-semibold text-gray-700 uppercase tracking-wide"
+                >Descripciones</label
+              >
+            </div>
+            <div
+              *ngIf="card.descriptions && card.descriptions.length > 0"
+              class="space-y-2"
+            >
+              <div
+                *ngFor="let d of card.descriptions; let i = index"
+                class="flex items-start bg-white border border-gray-100 rounded p-3"
+              >
+                <span
+                  class="inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-purple-500 rounded-full mr-3 mt-0.5 flex-shrink-0"
+                >
+                  {{ i + 1 }}
+                </span>
+                <span class="text-gray-800 leading-relaxed">{{
+                  d.description
+                }}</span>
+              </div>
+            </div>
+            <div
+              *ngIf="!card.descriptions || card.descriptions.length === 0"
+              class="text-gray-500 italic text-center py-4"
+            >
+              No hay descripciones disponibles
+            </div>
+          </div>
+        </div>
+      </p-tabpanel>
+
+      <!-- Historial -->
+      <p-tabpanel value="1">
+        <div
+          *ngIf="loadingLogs"
+          class="flex flex-col items-center justify-center py-8"
+        >
+          <i class="pi pi-spin pi-spinner text-2xl text-blue-500"></i>
+          <p class="mt-2 text-gray-600">Cargando historial...</p>
+        </div>
+
+        <!-- SIN HISTORIAL -->
+        <div
+          *ngIf="!loadingLogs && logs.length === 0"
+          class="flex flex-col items-center justify-center py-8"
+        >
+          <i class="pi pi-clock text-4xl text-gray-400 mb-3"></i>
+          <p class="text-gray-500">No hay historial disponible</p>
+        </div>
+
+        <div
+          *ngIf="!loadingLogs && logs.length > 0"
+          class="max-h-96 overflow-y-auto py-4 space-y-6"
+        >
+          <div *ngFor="let log of logs; let i = index" class="flex relative">
+            <div class="flex flex-col items-center mr-4">
+              <div
+                class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold z-10"
+                [ngClass]="getActionClasses(log.action)"
+              >
+                <i [class]="getActionIcon(log.action)"></i>
+              </div>
+              <div
+                *ngIf="i < logs.length - 1"
+                class="w-0.5 h-16 bg-gray-200 mt-2"
+              ></div>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 -mt-1">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div
+                  class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between"
+                >
+                  <div
+                    class="flex items-center px-3 py-1 rounded text-sm font-medium text-white"
+                    [ngClass]="getActionClasses(log.action)"
+                  >
+                    <i
+                      [class]="getActionIcon(log.action)"
+                      class="text-xs mr-2"
+                    ></i>
+                    {{ getActionText(log.action) }}
+                  </div>
+                  <span class="text-xs text-gray-500 font-medium">
+                    {{ formatDate(log.created_at!) }}
+                  </span>
+                </div>
+
+                <!-- Body -->
+                <div class="p-4">
+                  <div
+                    *ngIf="
+                      log.old_data && hasChanges(log.old_data, log.new_data)
+                    "
+                    class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                  >
+                    <!-- Old Data -->
+                    <div>
+                      <h5
+                        class="flex items-center text-sm font-semibold text-gray-700 mb-2"
+                      >
+                        <i class="pi pi-minus-circle text-red-500 mr-2"></i>
+                        Anterior
+                      </h5>
+                      <div
+                        class="bg-red-50 border border-red-200 rounded p-3 text-sm"
+                      >
+                        <div class="space-y-2">
+                          <div>
+                            <strong>Título:</strong>
+                            {{ getTitle(log.old_data) }}
+                          </div>
+                          <div>
+                            <strong>Descripciones:</strong>
+                            {{ getDescriptions(log.old_data) }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- New Data -->
+                    <div>
+                      <h5
+                        class="flex items-center text-sm font-semibold text-gray-700 mb-2"
+                      >
+                        <i class="pi pi-plus-circle text-green-500 mr-2"></i>
+                        Nuevo
+                      </h5>
+                      <div
+                        class="bg-green-50 border border-green-200 rounded p-3 text-sm"
+                      >
+                        <div class="space-y-2">
+                          <div>
+                            <strong>Título:</strong>
+                            {{ getTitle(log.new_data) }}
+                          </div>
+                          <div>
+                            <strong>Descripciones:</strong>
+                            {{ getDescriptions(log.new_data) }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    *ngIf="
+                      !log.old_data || !hasChanges(log.old_data, log.new_data)
+                    "
+                  >
+                    <div
+                      class="bg-blue-50 border border-blue-200 rounded p-3 text-sm"
+                    >
+                      <div class="space-y-2">
+                        <div>
+                          <strong>Título:</strong> {{ getTitle(log.new_data) }}
+                        </div>
+                        <div>
+                          <strong>Descripciones:</strong>
+                          {{ getDescriptions(log.new_data) }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
+
+  <div class="mt-6 text-right">
+    <button
+      pButton
+      label="Cerrar"
+      class="p-button-text"
+      (click)="hide()"
+    ></button>
+  </div>
+</p-dialog>

@@ -1,0 +1,65 @@
+<p-dialog 
+  [(visible)]="visible" 
+  [modal]="true" 
+  [closable]="false"
+  [style]="{ width: '600px' }"
+  header="{{ card ? 'Editar Card' : 'Crear Card' }}"
+>
+  <form [formGroup]="form" class="space-y-4">
+
+    <!-- TÍTULO -->
+    <div class="field">
+      <label for="title" class="block font-medium mb-1">Título</label>
+      <input 
+        id="title"
+        pInputText
+        formControlName="title"
+        class="w-full"
+        [class.p-invalid]="form.get('title')?.invalid && form.get('title')?.touched"
+      />
+      <small *ngIf="form.get('title')?.invalid && form.get('title')?.touched" class="text-error-500">
+        El título es requerido.
+      </small>
+    </div>
+
+
+    <div formArrayName="descriptions" class="space-y-2">
+      <label class="block font-medium">Descripciones</label>
+
+      <div *ngFor="let ctrl of descriptions.controls; let i = index" class="flex items-center gap-2">
+        <input 
+          pInputText 
+          [formControlName]="i"
+          class="w-full"
+          [class.p-invalid]="ctrl.invalid && ctrl.touched"
+          placeholder="Descripción {{ i + 1 }}"
+        />
+        <button 
+          pButton 
+          icon="pi pi-trash" 
+          class="p-button-text p-button-sm p-button-danger" 
+          type="button"
+          (click)="removeDescription(i)"
+          [disabled]="descriptions.length === 1"
+        ></button>
+      </div>
+      <small *ngIf="descriptions.invalid && descriptions.touched" class="text-red-500">
+        Cada descripción es requerida.
+      </small>
+
+      <button 
+        pButton 
+        type="button" 
+        icon="pi pi-plus" 
+        label="Agregar descripción" 
+        class="p-button-sm p-button-text"
+        (click)="addDescription()"
+      ></button>
+    </div>
+
+    <div class="flex justify-end gap-2 mt-4">
+      <button pButton label="Cancelar" class="p-button-text" (click)="onCancel()"></button>
+      <button pButton label="Guardar" class="p-button-primary" (click)="onSave()"></button>
+    </div>
+  </form>
+</p-dialog>
